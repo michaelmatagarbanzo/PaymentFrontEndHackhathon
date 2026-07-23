@@ -2,15 +2,23 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MerchantSelector from '@/components/MerchantSelector.vue'
-import TokenDisplay from '@/components/TokenDisplay.vue'
-import SdkSourceSelector from '@/components/SdkSourceSelector.vue'
-import type { Merchant, ResponseAuth } from '@/types'
-import { getToken, generateOrderId, decodeJwtPayload } from '@/utils/jwt'
+import type {
+  AppConnectorPaymentResponse,
+  AppConnectorProblemDetails,
+  Merchant,
+  PaymentForm,
+} from '@/types'
+import { generateOrderId } from '@/utils/jwt'
 import imgVisa from '@/assets/img/VISA.png'
 import imgMC   from '@/assets/img/MC.png'
 import imgAmex from '@/assets/img/AMEX.png'
-import { doubleToIso, formatCurrency, generateInvoice } from '@/utils/currency'
-import { useSdkSource, loadSdkUrl, resolvedSdkUrl } from '@/composables/useSdkSource'
+import { formatCurrency, generateInvoice } from '@/utils/currency'
+import {
+  buildAppConnectorPaymentRequest,
+  mapPaymentResponseToResult,
+  sendAppConnectorPayment,
+  toProblemMessage,
+} from '@/utils/appConnectorPayments'
 import merchantsConfig from '@/config/merchants.config.json'
 
 // ─── Random data helpers ───────────────────────────────────────────────────────
@@ -61,17 +69,14 @@ function randomAmount(): number {
 const router = useRouter()
 const merchants = ref<Merchant[]>(merchantsConfig.merchants as Merchant[])
 const selectedMerchant = ref<Merchant | null>(null)
-const currentToken = ref('')
-const isGeneratingToken = ref(false)
 const isPaying = ref(false)
-const sdkReady = ref(false)
 const error = ref('')
 const errorDetails = ref<{ code?: number; url?: string; message: string } | null>(null)
 const orderId = ref(generateOrderId())
 
 // Form state
 const _initialName = randomFullName()
-const form = ref({
+const form = ref<PaymentForm>({
   creditCard: '4000000000002503',
   expirationMonth: '01',
   expirationYear: '2027',
@@ -82,11 +87,10 @@ const form = ref({
   email: randomEmail(_initialName),
   invoice: generateInvoice(),
   amount: randomAmount(),
+  paymentIndicator: 'C101',
 })
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
-
-const totalIso = computed(() => doubleToIso(form.value.amount))
 
 const isAmex = computed(() => form.value.creditCard.startsWith('3'))
 const isVisa = computed(() => form.value.creditCard.startsWith('4'))
@@ -98,17 +102,12 @@ const cardBrand = computed(() => {
   return 'CARD'
 })
 
-useSdkSource() // initialize composable
-
 // ─── Watchers ─────────────────────────────────────────────────────────────────
 
 watch(() => form.value.creditCard, (card) => {
   // Amex uses 4-digit CVV, others use 3
   form.value.cvv = card.startsWith('3') ? '1234' : '123'
 })
-
-// Reset SDK when source changes so it reloads on next pay()
-watch(resolvedSdkUrl, () => { sdkReady.value = false })
 
 // Format card number display with spaces every 4 digits
 const formattedCardNumber = computed(() => {
@@ -168,12 +167,12 @@ function startNetworkMonitoring() {
           url,
         })
 
-        // If it's a 401, update error details
+        // Surface auth-related errors clearly (API key missing/invalid/ambiguous)
         if (response.status === 401) {
           errorDetails.value = {
             code: 401,
             url,
-            message: 'No autorizado - Verifique las credenciales del comercio',
+            message: 'No autorizado - Verifique X-API-Key y evite enviar Authorization',
           }
           error.value = `Error ${response.status}: ${response.statusText}`
         }
@@ -193,110 +192,71 @@ function startNetworkMonitoring() {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function generateToken() {
-  if (!selectedMerchant.value) return
-  isGeneratingToken.value = true
-  error.value = ''
-  errorDetails.value = null
-
-  try {
-    const tk = await getToken(
-      orderId.value,
-      totalIso.value,
-      selectedMerchant.value.terminalId,
-      selectedMerchant.value,
-      form.value.invoice,
-    )
-    currentToken.value = tk
-    sdkReady.value = false // Reset SDK when token changes
-  } catch (err) {
-    error.value = `Error generando token: ${(err as Error).message}`
-    errorDetails.value = { message: (err as Error).message }
-  } finally {
-    isGeneratingToken.value = false
-  }
-}
-
-async function onMerchantSelected(merchant: Merchant | null) {
+function onMerchantSelected(merchant: Merchant | null) {
   selectedMerchant.value = merchant
-  if (merchant) await generateToken()
-}
-
-async function load3DSSDK() {
-  sdkReady.value = false
-  error.value = ''
-  errorDetails.value = null
-
-  try {
-    await loadSdkUrl(resolvedSdkUrl.value, 'safekeyjs')
-    sdkReady.value = true
-  } catch (err) {
-    error.value = `Error cargando 3DS SDK: ${(err as Error).message}`
-    errorDetails.value = { message: (err as Error).message, url: resolvedSdkUrl.value }
-  }
-}
-
-function handlePaymentResponse(responseToken: string) {
-  if (responseToken === 'FAILURE') {
-    error.value = 'El pago fue rechazado. Intente con otro medio de pago.'
-    errorDetails.value = { message: 'Pago rechazado por el procesador' }
-    isPaying.value = false
-    return
-  }
-
-  const decoded = decodeJwtPayload<{ Response?: ResponseAuth }>(responseToken)
-  const result: ResponseAuth = decoded?.Response ?? {}
-
-  router.push({
-    name: 'result',
-    query: {
-      data: JSON.stringify(result),
-      source: 'safekey',
-    },
-  })
 }
 
 async function pay() {
-  if (!selectedMerchant.value || !currentToken.value) return
-  if (!sdkReady.value) await load3DSSDK()
-  if (!window.BacSecurePay) {
-    error.value = 'SDK no disponible. Verifique la fuente del script.'
-    errorDetails.value = { message: 'SDK no cargado', url: resolvedSdkUrl.value }
-    return
-  }
+  if (!selectedMerchant.value) return
 
   isPaying.value = true
   error.value = ''
   errorDetails.value = null
 
   try {
-    window.BacSecurePay.Init({
-      Token: currentToken.value,
-      PublicKey: selectedMerchant.value.publicKey,
-      LoadSongBird: false,
-      Continue: () => {
-        window.BacSecurePay?.Pay()
-      },
-      callback: (data) => {
-        handlePaymentResponse(data.Token)
+    const request = buildAppConnectorPaymentRequest({
+      merchant: selectedMerchant.value,
+      form: form.value,
+      referenceCode: orderId.value,
+    })
+
+    const response = await sendAppConnectorPayment(request, {
+      correlationId: orderId.value,
+    })
+
+    if (!response.ok) {
+      let problem: AppConnectorProblemDetails | null = null
+      try {
+        problem = await response.json() as AppConnectorProblemDetails
+      } catch {
+        problem = null
+      }
+
+      const problemMessage = toProblemMessage(problem ?? {}, `HTTP ${response.status}`)
+      error.value = problemMessage
+      errorDetails.value = {
+        code: response.status,
+        url: response.url,
+        message: problem?.traceId ? `${problemMessage} (traceId: ${problem.traceId})` : problemMessage,
+      }
+      return
+    }
+
+    const data = await response.json() as AppConnectorPaymentResponse
+    const result = mapPaymentResponseToResult(data)
+
+    router.push({
+      name: 'result',
+      query: {
+        data: JSON.stringify(result),
+        source: 'appconnector',
       },
     })
   } catch (err) {
-    error.value = `Error al inicializar el pago: ${(err as Error).message}`
+    error.value = `Error procesando pago: ${(err as Error).message}`
     errorDetails.value = { message: (err as Error).message }
+  } finally {
     isPaying.value = false
   }
 }
 
-async function refreshToken() {
+function refreshToken() {
   orderId.value = generateOrderId()
-  if (selectedMerchant.value) await generateToken()
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 onMounted(() => {
-  load3DSSDK()
   startNetworkMonitoring()
 })
 </script>
@@ -491,10 +451,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Token display -->
-        <div v-if="currentToken" class="card p-4">
-          <TokenDisplay :token="currentToken" />
-        </div>
       </div>
 
       <!-- Right: Controls -->
@@ -512,24 +468,19 @@ onMounted(() => {
           <MerchantSelector
             :merchants="merchants"
             :model-value="selectedMerchant"
-            :loading="isGeneratingToken"
+            :loading="isPaying"
             @update:modelValue="onMerchantSelected"
           />
         </div>
 
         <!-- Pay button -->
         <div class="card p-4 space-y-3">
-          <div v-if="isGeneratingToken" class="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-            <div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            Generando JWT...
-          </div>
-
           <button
             @click="pay"
-            :disabled="!selectedMerchant || !currentToken || isPaying || isGeneratingToken"
+            :disabled="!selectedMerchant || isPaying"
             class="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-semibold text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
             :class="
-              selectedMerchant && currentToken && !isPaying
+              selectedMerchant && !isPaying
                 ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-glow-emerald'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-200 dark:border-slate-700'
             "
@@ -539,7 +490,7 @@ onMounted(() => {
               <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
               <line x1="1" y1="10" x2="23" y2="10" />
             </svg>
-            {{ isPaying ? 'Procesando...' : 'Pagar con 3DS' }}
+            {{ isPaying ? 'Procesando...' : 'Procesar pago' }}
           </button>
 
           <p v-if="!selectedMerchant" class="text-xs text-slate-400 text-center font-mono">
@@ -575,19 +526,6 @@ onMounted(() => {
           </div>
         </Transition>
 
-        <!-- SDK source config -->
-        <div class="card p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <p class="label mb-0">Fuente del SDK</p>
-            <div class="flex items-center gap-1.5">
-              <span class="badge-amber text-[10px]">{{ merchantsConfig.environment }}</span>
-              <span :class="sdkReady ? 'badge-emerald' : 'badge-cyan'" class="badge text-[10px]">
-                {{ sdkReady ? 'Listo' : 'Pendiente' }}
-              </span>
-            </div>
-          </div>
-          <SdkSourceSelector />
-        </div>
       </div>
     </div>
   </div>

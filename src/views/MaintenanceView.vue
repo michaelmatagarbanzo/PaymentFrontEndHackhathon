@@ -32,9 +32,20 @@ const emptyTerminalForm = (): Merchant => ({
   publicKey: '',
   audience: 'BCO',
   description: '',
+  transactionType: 'SALE',
+  securityValidationResponse: '',
+  binValidate: true,
+  authenticationEci: '',
+  authenticationCavv: '',
+  authenticationXid: '',
+  authenticationEnrollmentStatus: '',
   wallet: '',
+  device: '20',
+  paymentIndicator: 'C101',
   cryptogramEci: '',
   cryptogram: '',
+  errorCentinel: '',
+  statusReason: '',
   isApplePayTransaction: '',
 })
 
@@ -95,9 +106,20 @@ async function saveTerminal() {
     publicKey: terminalForm.publicKey.trim(),
     audience: terminalForm.audience.trim(),
     description: terminalForm.description.trim() || terminalForm.terminalId.trim(),
+    ...(terminalForm.transactionType?.trim() && { transactionType: terminalForm.transactionType.trim() }),
+    ...(terminalForm.securityValidationResponse?.trim() && { securityValidationResponse: terminalForm.securityValidationResponse.trim() }),
+    ...(terminalForm.binValidate !== undefined && { binValidate: terminalForm.binValidate }),
+    ...(terminalForm.authenticationEci?.trim() && { authenticationEci: terminalForm.authenticationEci.trim() }),
+    ...(terminalForm.authenticationCavv?.trim() && { authenticationCavv: terminalForm.authenticationCavv.trim() }),
+    ...(terminalForm.authenticationXid?.trim() && { authenticationXid: terminalForm.authenticationXid.trim() }),
+    ...(terminalForm.authenticationEnrollmentStatus?.trim() && { authenticationEnrollmentStatus: terminalForm.authenticationEnrollmentStatus.trim() }),
     ...(terminalForm.wallet?.trim() && { wallet: terminalForm.wallet.trim() }),
+    ...(terminalForm.device?.trim() && { device: terminalForm.device.trim() }),
+    ...(terminalForm.paymentIndicator?.trim() && { paymentIndicator: terminalForm.paymentIndicator.trim() }),
     ...(terminalForm.cryptogramEci?.trim() && { cryptogramEci: terminalForm.cryptogramEci.trim() }),
     ...(terminalForm.cryptogram?.trim() && { cryptogram: terminalForm.cryptogram.trim() }),
+    ...(terminalForm.errorCentinel?.trim() && { errorCentinel: terminalForm.errorCentinel.trim() }),
+    ...(terminalForm.statusReason?.trim() && { statusReason: terminalForm.statusReason.trim() }),
     ...(terminalForm.isApplePayTransaction?.trim() && { isApplePayTransaction: terminalForm.isApplePayTransaction.trim() }),
   }
   const next = [...terminals.value]
@@ -420,6 +442,43 @@ onMounted(() => {
               </div>
 
               <p class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide pt-1">Campos opcionales (Request)</p>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="label text-[10px]">TransactionType</label>
+                  <input v-model="terminalForm.transactionType" type="text" class="input-field text-xs" placeholder="SALE" />
+                </div>
+                <div>
+                  <label class="label text-[10px]">SecValidationResp</label>
+                  <input v-model="terminalForm.securityValidationResponse" type="text" class="input-field text-xs" placeholder="1" />
+                </div>
+                <div>
+                  <label class="label text-[10px]">BinValidate</label>
+                  <select v-model="terminalForm.binValidate" class="input-field text-xs">
+                    <option :value="true">true</option>
+                    <option :value="false">false</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="label text-[10px]">Auth ECI</label>
+                  <input v-model="terminalForm.authenticationEci" type="text" class="input-field text-xs" placeholder="232" />
+                </div>
+                <div>
+                  <label class="label text-[10px]">Auth CAVV</label>
+                  <input v-model="terminalForm.authenticationCavv" type="text" class="input-field text-xs" placeholder="2323" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="label text-[10px]">Auth XID</label>
+                  <input v-model="terminalForm.authenticationXid" type="text" class="input-field text-xs" placeholder="2323" />
+                </div>
+                <div>
+                  <label class="label text-[10px]">EnrollmentStatus</label>
+                  <input v-model="terminalForm.authenticationEnrollmentStatus" type="text" class="input-field text-xs" placeholder="2323" />
+                </div>
+              </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="label text-[10px]">Wallet</label>
@@ -430,9 +489,29 @@ onMounted(() => {
                   <input v-model="terminalForm.cryptogramEci" type="text" class="input-field text-xs" placeholder="42" />
                 </div>
               </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="label text-[10px]">Device</label>
+                  <input v-model="terminalForm.device" type="text" class="input-field text-xs" placeholder="20" />
+                </div>
+                <div>
+                  <label class="label text-[10px]">PaymentIndicator</label>
+                  <input v-model="terminalForm.paymentIndicator" type="text" class="input-field text-xs" placeholder="232" />
+                </div>
+              </div>
               <div>
                 <label class="label text-[10px]">Cryptogram</label>
                 <input v-model="terminalForm.cryptogram" type="text" class="input-field text-xs font-mono" placeholder="TESTING_CRYPTO" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="label text-[10px]">ErrorCentinel</label>
+                  <input v-model="terminalForm.errorCentinel" type="text" class="input-field text-xs" placeholder="2323" />
+                </div>
+                <div>
+                  <label class="label text-[10px]">StatusReason</label>
+                  <input v-model="terminalForm.statusReason" type="text" class="input-field text-xs" placeholder="2323" />
+                </div>
               </div>
               <div>
                 <label class="label text-[10px]">IsApplePayTransaction</label>

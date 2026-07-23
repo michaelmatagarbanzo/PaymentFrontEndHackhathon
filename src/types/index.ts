@@ -18,6 +18,16 @@ export interface Merchant {
   isApplePayTransaction?: string
   cryptogramEci?: string
   cryptogram?: string
+  securityValidationResponse?: string
+  binValidate?: boolean
+  authenticationEci?: string
+  authenticationCavv?: string
+  authenticationXid?: string
+  authenticationEnrollmentStatus?: string
+  device?: string
+  paymentIndicator?: string
+  errorCentinel?: string
+  statusReason?: string
 }
 
 export interface MerchantsConfig {
@@ -80,9 +90,106 @@ export interface PaymentForm {
   paymentIndicator: string
 }
 
+// ─── AppConnector Payments API ───────────────────────────────────────────────
+
+export interface AppConnectorPaymentRequest {
+  clientReferenceInformation: {
+    code: string
+    ecspLogId: string | null
+  }
+  transactionInformation: {
+    transactionType: string
+    terminalId: string
+    entryMode: string
+  }
+  paymentInformation: {
+    card: {
+      number: string
+      expirationMonth: string
+      expirationYear: string
+      securityCode: string | null
+      cardHolderName: string | null
+    }
+  }
+  orderInformation: {
+    amountDetails: {
+      totalAmount: string
+      currency: string
+    }
+  }
+  authenticationInformation: {
+    eci: string
+    cavv: string
+    xid: string
+    enrollmentStatus: string
+  } | null
+  tokenizationInformation: {
+    wallet: string
+    device: string
+    paymentIndicator: string
+    cryptogramEci: string
+    cryptogram: string
+  } | null
+  processingInformation: {
+    errorCentinel: string
+    statusReason: string
+  } | null
+}
+
+export interface AppConnectorPaymentResponse {
+  transactionId: string
+  provider: 'WCF_Pasarelas' | 'CyberSource' | string
+  status: 'Approved' | 'Declined' | 'Error' | string
+  providerStatus: string | null
+  providerResponseCode: string | null
+  providerMessage: string | null
+  authorizationCode: string | null
+  referenceNumber: string | null
+  referenceCode: string | null
+  traceId: string
+  processedAt: string
+}
+
+export interface AppConnectorProblemDetails {
+  type?: string
+  title?: string
+  status?: number
+  detail?: string
+  traceId?: string
+}
+
 // ─── JWT Payload ──────────────────────────────────────────────────────────────
 
 export interface JwtRequest {
+  terminalId: string
+  transactionType: string
+  totalAmount: number
+  accountNumber: string
+  expirationDate: string
+  invoice: number
+  securityCodeEntry: string
+  securityValidationResponse: string
+  binValidate: boolean
+  authenticationInformation: {
+    eci: string
+    cavv: string
+    xid: string
+    enrollmentStatus: string
+  }
+  tokenizationInformation: {
+    wallet: string
+    device: string
+    paymentIndicator: string
+    cryptogramEci: string
+    cryptogram: string
+  }
+  processingInformation: {
+    errorCentinel: string
+    statusReason: string
+  }
+}
+
+export interface LegacyJwtRequest {
   orderId: string
   totalAmount: string
   terminalId: string
@@ -99,7 +206,14 @@ export interface JwtPayload {
   unique_name: string
   sub: string
   aud: string
-  Request: JwtRequest
+  Request: JwtRequest | LegacyJwtRequest
+}
+
+export interface TokenCardData {
+  accountNumber: string
+  expirationMonth: string
+  expirationYear: string
+  securityCodeEntry: string
 }
 
 // ─── Transaction Result ───────────────────────────────────────────────────────
@@ -128,6 +242,15 @@ export interface ResponseAuth {
   salesAmount?: string
   refundsAmount?: string
   orderId?: string
+  provider?: string
+  status?: string
+  providerStatus?: string
+  providerResponseCode?: string
+  providerMessage?: string
+  authorizationCode?: string
+  referenceCode?: string
+  traceId?: string
+  processedAt?: string
 }
 
 // ─── SDK Declarations (global window objects) ─────────────────────────────────

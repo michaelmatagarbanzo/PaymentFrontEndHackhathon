@@ -18,15 +18,25 @@ const result = computed<ResponseAuth>(() => {
 })
 
 const isApproved = computed(() =>
-  result.value.responseCode === '00' || result.value.responseCode === '000'
+  result.value.status === 'Approved' ||
+  result.value.responseCode === '00' ||
+  result.value.responseCode === '000'
 )
 
 const fields: { key: keyof ResponseAuth; label: string; highlight?: boolean }[] = [
   { key: 'responseCode', label: 'Código Respuesta', highlight: true },
   { key: 'responseCodeDescription', label: 'Descripción', highlight: true },
+  { key: 'provider', label: 'Proveedor', highlight: true },
+  { key: 'status', label: 'Estado', highlight: true },
+  { key: 'providerStatus', label: 'Estado Proveedor' },
+  { key: 'providerMessage', label: 'Mensaje Proveedor' },
   { key: 'authorizationNumber', label: 'N° Autorización', highlight: true },
+  { key: 'authorizationCode', label: 'Auth Code', highlight: true },
   { key: 'transactionId', label: 'Transaction ID' },
   { key: 'referenceNumber', label: 'N° Referencia' },
+  { key: 'referenceCode', label: 'Código Referencia' },
+  { key: 'traceId', label: 'Trace ID' },
+  { key: 'processedAt', label: 'Procesado En' },
   { key: 'systemTraceNumber', label: 'System Trace' },
   { key: 'invoice', label: 'Factura' },
   { key: 'orderId', label: 'Order ID' },
@@ -48,7 +58,7 @@ const visibleFields = computed(() =>
 )
 
 function goBack() {
-  router.push(source.value === 'safekey' ? '/payment' : '/')
+  router.push(source.value === 'checkout' ? '/' : '/payment')
 }
 </script>
 
@@ -69,7 +79,7 @@ function goBack() {
           <h1 class="text-xl font-semibold text-slate-800">Resultado de Transacción</h1>
         </div>
         <p class="text-sm text-slate-500 font-mono">
-          Fuente: {{ source === 'safekey' ? 'Amex SafeKey' : 'BCO Checkout' }}
+          Fuente: {{ source === 'checkout' ? 'BCO Checkout' : source === 'appconnector' ? 'AppConnector API' : 'Amex SafeKey' }}
         </p>
       </div>
     </div>

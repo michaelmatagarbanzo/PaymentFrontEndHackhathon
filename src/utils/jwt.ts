@@ -6,7 +6,7 @@
  * bytes = UTF-8 bytes of the raw privateKey string.
  */
 
-import type { Merchant, JwtRequest, JwtPayload } from '@/types'
+import type { Merchant, JwtRequest, JwtPayload, LegacyJwtRequest, TokenCardData } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -33,6 +33,96 @@ function generateOrderId(): string {
     String(now.getSeconds()).padStart(2, '0') +
     String(now.getMilliseconds()).padStart(3, '0')
   return timeStr.substring(0, 9)
+}
+
+function assertRequired(value: string | undefined, fieldName: string): string {
+  const trimmed = value?.trim() ?? ''
+  if (!trimmed) {
+    throw new Error(`Falta el campo requerido para Request.${fieldName}`)
+  }
+  return trimmed
+}
+
+function assertRequiredBoolean(value: boolean | undefined, fieldName: string): boolean {
+  if (value === undefined) {
+    throw new Error(`Falta el campo requerido para Request.${fieldName}`)
+  }
+  return value
+}
+
+function parseInvoiceNumber(invoice: string): number {
+  const parsed = Number.parseInt(invoice, 10)
+  if (Number.isNaN(parsed)) {
+    throw new Error('Invoice debe ser numerico para el nuevo contrato')
+  }
+  return parsed
+}
+
+function buildExpirationDate(expirationMonth: string, expirationYear: string): string {
+  const month = expirationMonth.trim().padStart(2, '0')
+  const yearRaw = expirationYear.trim()
+  const year = yearRaw.length >= 2 ? yearRaw.slice(-2) : yearRaw.padStart(2, '0')
+  return `${year}${month}`
+}
+
+function toIsoAmountNumber(amount: string | number): number {
+  if (typeof amount === 'number') return amount
+  const numeric = Number.parseInt(amount, 10)
+  if (Number.isNaN(numeric)) {
+    throw new Error('totalAmount debe ser numerico')
+  }
+  return numeric
+}
+
+function buildOfficialRequest(
+  merchant: Merchant,
+  totalAmount: string | number,
+  terminalId: string,
+  invoice: string,
+  cardData: TokenCardData,
+): JwtRequest {
+  const accountNumber = assertRequired(cardData.accountNumber, 'accountNumber').replace(/\s+/g, '')
+  const expirationMonth = assertRequired(cardData.expirationMonth, 'expirationDate.month')
+  const expirationYear = assertRequired(cardData.expirationYear, 'expirationDate.year')
+  const securityCodeEntry = assertRequired(cardData.securityCodeEntry, 'securityCodeEntry')
+
+  return {
+    terminalId,
+    transactionType: merchant.transactionType?.trim() || 'SALE',
+    totalAmount: toIsoAmountNumber(totalAmount),
+    accountNumber,
+    expirationDate: buildExpirationDate(expirationMonth, expirationYear),
+    invoice: parseInvoiceNumber(invoice),
+    securityCodeEntry,
+    securityValidationResponse: assertRequired(
+      merchant.securityValidationResponse,
+      'securityValidationResponse',
+    ),
+    binValidate: assertRequiredBoolean(merchant.binValidate, 'binValidate'),
+    authenticationInformation: {
+      eci: assertRequired(merchant.authenticationEci ?? merchant.cryptogramEci, 'authenticationInformation.eci'),
+      cavv: assertRequired(merchant.authenticationCavv ?? merchant.cryptogram, 'authenticationInformation.cavv'),
+      xid: assertRequired(merchant.authenticationXid, 'authenticationInformation.xid'),
+      enrollmentStatus: assertRequired(
+        merchant.authenticationEnrollmentStatus,
+        'authenticationInformation.enrollmentStatus',
+      ),
+    },
+    tokenizationInformation: {
+      wallet: assertRequired(merchant.wallet, 'tokenizationInformation.wallet'),
+      device: assertRequired(merchant.device ?? '20', 'tokenizationInformation.device'),
+      paymentIndicator: assertRequired(
+        merchant.paymentIndicator ?? 'C101',
+        'tokenizationInformation.paymentIndicator',
+      ),
+      cryptogramEci: assertRequired(merchant.cryptogramEci, 'tokenizationInformation.cryptogramEci'),
+      cryptogram: assertRequired(merchant.cryptogram, 'tokenizationInformation.cryptogram'),
+    },
+    processingInformation: {
+      errorCentinel: assertRequired(merchant.errorCentinel, 'processingInformation.errorCentinel'),
+      statusReason: assertRequired(merchant.statusReason, 'processingInformation.statusReason'),
+    },
+  }
 }
 
 // ─── Core JWT Builder ─────────────────────────────────────────────────────────
@@ -85,29 +175,32 @@ function buildBasePayload(merchant: Merchant, request: JwtRequest): JwtPayload {
  */
 export async function getToken(
   orderId: string,
-  totalAmount: string,
+  totalAmount: string | number,
   terminalId: string,
   merchant: Merchant,
   invoice?: string,
+  cardData?: TokenCardData,
 ): Promise<string> {
   const inv = invoice ?? generateOrderId()
 
-  const request: JwtRequest = {
-    orderId,
-    totalAmount,
-    clientId: 'Test-001',
-    idSession: crypto.randomUUID(),
-    terminalId,
-    invoice: inv,
-    transactionType: merchant.transactionType ?? 'AUTH',
-    paymentIndicator: 'C101',
-    Wallet: merchant.wallet ?? 'C',
-    CryptogramEci: merchant.cryptogramEci ?? '42',
-    Cryptogram: merchant.cryptogram ?? 'TESTING_CRYPTO',
-    CryptogramBlockB: 'MDAwMDAwMDAwMDAwMDAwMDAwMDA=',
-    Device: '20',
-    ...(merchant.isApplePayTransaction !== undefined && { IsApplePayTransaction: merchant.isApplePayTransaction }),
-  }
+  const request: JwtRequest | LegacyJwtRequest = cardData
+    ? buildOfficialRequest(merchant, totalAmount, terminalId, inv, cardData)
+    : {
+      orderId,
+      totalAmount: String(totalAmount),
+      clientId: 'Test-001',
+      idSession: crypto.randomUUID(),
+      terminalId,
+      invoice: inv,
+      transactionType: merchant.transactionType ?? 'AUTH',
+      paymentIndicator: 'C101',
+      Wallet: merchant.wallet ?? 'C',
+      CryptogramEci: merchant.cryptogramEci ?? '42',
+      Cryptogram: merchant.cryptogram ?? 'TESTING_CRYPTO',
+      CryptogramBlockB: 'MDAwMDAwMDAwMDAwMDAwMDAwMDA=',
+      Device: '20',
+      ...(merchant.isApplePayTransaction !== undefined && { IsApplePayTransaction: merchant.isApplePayTransaction }),
+    }
 
   const payload = buildBasePayload(merchant, request)
   return buildToken(payload, merchant)

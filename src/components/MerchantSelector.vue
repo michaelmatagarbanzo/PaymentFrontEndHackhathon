@@ -22,9 +22,20 @@ const customForm = reactive<{
   publicKey: string
   audience: string
   description: string
+  transactionType: string
+  securityValidationResponse: string
+  binValidate: boolean
+  authenticationEci: string
+  authenticationCavv: string
+  authenticationXid: string
+  authenticationEnrollmentStatus: string
   wallet: string
+  device: string
+  paymentIndicator: string
   cryptogramEci: string
   cryptogram: string
+  errorCentinel: string
+  statusReason: string
   isApplePayTransaction: string
 }>({
   merchantId: '',
@@ -33,9 +44,20 @@ const customForm = reactive<{
   publicKey: '',
   audience: 'BCO',
   description: 'Custom',
+  transactionType: 'SALE',
+  securityValidationResponse: '',
+  binValidate: true,
+  authenticationEci: '',
+  authenticationCavv: '',
+  authenticationXid: '',
+  authenticationEnrollmentStatus: '',
   wallet: '',
+  device: '20',
+  paymentIndicator: 'C101',
   cryptogramEci: '',
   cryptogram: '',
+  errorCentinel: '',
+  statusReason: '',
   isApplePayTransaction: '',
 })
 
@@ -68,9 +90,20 @@ function applyCustom() {
     publicKey: customForm.publicKey.trim(),
     audience: customForm.audience.trim(),
     description: customForm.description.trim() || 'Custom',
+    ...(customForm.transactionType.trim() && { transactionType: customForm.transactionType.trim() }),
+    ...(customForm.securityValidationResponse.trim() && { securityValidationResponse: customForm.securityValidationResponse.trim() }),
+    binValidate: customForm.binValidate,
+    ...(customForm.authenticationEci.trim() && { authenticationEci: customForm.authenticationEci.trim() }),
+    ...(customForm.authenticationCavv.trim() && { authenticationCavv: customForm.authenticationCavv.trim() }),
+    ...(customForm.authenticationXid.trim() && { authenticationXid: customForm.authenticationXid.trim() }),
+    ...(customForm.authenticationEnrollmentStatus.trim() && { authenticationEnrollmentStatus: customForm.authenticationEnrollmentStatus.trim() }),
     ...(customForm.wallet.trim() && { wallet: customForm.wallet.trim() }),
+    ...(customForm.device.trim() && { device: customForm.device.trim() }),
+    ...(customForm.paymentIndicator.trim() && { paymentIndicator: customForm.paymentIndicator.trim() }),
     ...(customForm.cryptogramEci.trim() && { cryptogramEci: customForm.cryptogramEci.trim() }),
     ...(customForm.cryptogram.trim() && { cryptogram: customForm.cryptogram.trim() }),
+    ...(customForm.errorCentinel.trim() && { errorCentinel: customForm.errorCentinel.trim() }),
+    ...(customForm.statusReason.trim() && { statusReason: customForm.statusReason.trim() }),
     ...(customForm.isApplePayTransaction.trim() && { isApplePayTransaction: customForm.isApplePayTransaction.trim() }),
   }
   emit('update:modelValue', merchant)
@@ -143,6 +176,43 @@ const selectValue = computed(() => {
         </div>
 
         <p class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide pt-1">Campos opcionales (Request)</p>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="label text-[10px]">TransactionType</label>
+            <input v-model="customForm.transactionType" type="text" class="input-field text-xs" placeholder="SALE" />
+          </div>
+          <div>
+            <label class="label text-[10px]">SecValidationResp</label>
+            <input v-model="customForm.securityValidationResponse" type="text" class="input-field text-xs" placeholder="1" />
+          </div>
+          <div>
+            <label class="label text-[10px]">BinValidate</label>
+            <select v-model="customForm.binValidate" class="input-field text-xs">
+              <option :value="true">true</option>
+              <option :value="false">false</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="label text-[10px]">Auth ECI</label>
+            <input v-model="customForm.authenticationEci" type="text" class="input-field text-xs" placeholder="232" />
+          </div>
+          <div>
+            <label class="label text-[10px]">Auth CAVV</label>
+            <input v-model="customForm.authenticationCavv" type="text" class="input-field text-xs" placeholder="2323" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="label text-[10px]">Auth XID</label>
+            <input v-model="customForm.authenticationXid" type="text" class="input-field text-xs" placeholder="2323" />
+          </div>
+          <div>
+            <label class="label text-[10px]">EnrollmentStatus</label>
+            <input v-model="customForm.authenticationEnrollmentStatus" type="text" class="input-field text-xs" placeholder="2323" />
+          </div>
+        </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="label text-[10px]">Wallet</label>
@@ -153,9 +223,29 @@ const selectValue = computed(() => {
             <input v-model="customForm.cryptogramEci" type="text" class="input-field text-xs" placeholder="42" />
           </div>
         </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="label text-[10px]">Device</label>
+            <input v-model="customForm.device" type="text" class="input-field text-xs" placeholder="20" />
+          </div>
+          <div>
+            <label class="label text-[10px]">PaymentIndicator</label>
+            <input v-model="customForm.paymentIndicator" type="text" class="input-field text-xs" placeholder="C101" />
+          </div>
+        </div>
         <div>
           <label class="label text-[10px]">Cryptogram</label>
           <input v-model="customForm.cryptogram" type="text" class="input-field text-xs font-mono" placeholder="TESTING_CRYPTO" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="label text-[10px]">ErrorCentinel</label>
+            <input v-model="customForm.errorCentinel" type="text" class="input-field text-xs" placeholder="2323" />
+          </div>
+          <div>
+            <label class="label text-[10px]">StatusReason</label>
+            <input v-model="customForm.statusReason" type="text" class="input-field text-xs" placeholder="2323" />
+          </div>
         </div>
         <div>
           <label class="label text-[10px]">IsApplePayTransaction</label>
