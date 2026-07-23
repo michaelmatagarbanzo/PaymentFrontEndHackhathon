@@ -1,0 +1,39 @@
+{
+  "merchants": [
+    {
+      "merchantId": "60001002",
+      "privateKey": "CnDPUk4LswujEO4EWApcjmFrxXai6K62bBJv7ObmOG76SHo02jf",
+      "publicKey": "jyY8pQu/OpBohKp9j1",
+      "terminalId": "60001002",
+      "description": "Terminal de Prueba 1",
+      "audience": "BCO"
+    },
+    {
+      "merchantId": "60001578",
+      "privateKey": "OtVqVHtgqZlv8xFcyCSCVyXVbUaA0jX79kJFHn1SwWHAtO65e66",
+      "publicKey": "2iJWtFqGevyLU61J0u",
+      "terminalId": "60001578",
+      "description": "Terminal de Prueba 2",
+      "audience": "BCO"
+    },
+    {
+      "merchantId": "11122200",
+      "privateKey": "CeOcO0bb85QeDUpR2VEEZxb7MGN1vVhp8u2cCrncfU7Drp2mqFs",
+      "publicKey": "OwIu1dRK86JMZkHLZu",
+      "terminalId": "GINI0001",
+      "description": "Terminal de Prueba GINI",
+      "audience": "BCO"
+    }
+  ],
+  "checkoutScripts": {
+    "development": "https://cspbk.credomatic.com.hn:448/CSP%20Apis/3DS/CheckOut/js/checkout.js",
+    "staging": "https://csp.credomatic.com:50581/3DS/CheckOut/js/checkout.js",
+    "production": "https://ecommerce.credomatic.com:447/3DS/CheckOut/js/checkout.js"
+  },
+  "safekeyScripts": {
+    "development": "https://cspbk.credomatic.com.hn:448/CSP%20Apis/3DS/API/Scripts/SafeKey.min.js",
+    "staging": "https://csp.credomatic.com:50581/3DS/API/Scripts/SafeKey.js",
+    "production": "https://cspbk.credomatic.com.hn:448/CSP%20Apis/3DS/API/Scripts/SafeKey.min.js"
+  },
+  "environment": "development"
+}

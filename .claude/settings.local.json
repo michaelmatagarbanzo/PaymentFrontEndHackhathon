@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npm run *)",
+      "Bash(timeout 20 bash -c 'until grep -qE \"Local:|ready in\" \"C:\\\\Users\\\\GERALD~1.VAR\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Proyectos-3ds-tester-v2\\\\c380455c-61e2-41cc-9c3d-298c97095cbe\\\\tasks\\\\bleaz80cg.output\" 2>/dev/null; do sleep 0.5; done; cat \"C:\\\\Users\\\\GERALD~1.VAR\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Proyectos-3ds-tester-v2\\\\c380455c-61e2-41cc-9c3d-298c97095cbe\\\\tasks\\\\bleaz80cg.output\"')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5173/)",
+      "PowerShell(Get-NetTCPConnection -State Listen | Where-Object { $_.LocalAddress -eq '127.0.0.1' -or $_.LocalAddress -eq '0.0.0.0' } | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort)",
+      "PowerShell(Get-Process -Id 18832,4696,42268,3780,2400 -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process node,npm -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name='node.exe'\")",
+      "PowerShell(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -in 120,17116,41048,5536 } | Select-Object LocalAddress, LocalPort, OwningProcess)",
+      "PowerShell(Stop-Process -Id 41048,5536 -Force)",
+      "PowerShell(Get-Process -Id 41048,5536 -ErrorAction SilentlyContinue)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:5173\" -UseBasicParsing -TimeoutSec 5 | Select-Object StatusCode, @{n='Len';e={$_.Content.Length}})",
+      "PowerShell(Stop-Process -Id 120,17116 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process -Id 120,17116 -ErrorAction SilentlyContinue)"
+    ]
+  }
+}

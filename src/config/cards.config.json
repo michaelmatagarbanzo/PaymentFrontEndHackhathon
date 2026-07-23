@@ -1,0 +1,13 @@
+{
+  "cards": [
+    {
+      "id": "default-visa",
+      "card": "4000000000002503",
+      "month": "01",
+      "year": "2027",
+      "cvv": "123",
+      "amount": 500,
+      "description": "VISA 3DS challenge"
+    }
+  ]
+}
