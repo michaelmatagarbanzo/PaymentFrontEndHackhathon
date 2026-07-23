@@ -13,6 +13,24 @@ Abre http://localhost:5173
 
 ## ⚙️ Configuración
 
+### Login con Microsoft Azure (MSAL)
+
+1. Cree un archivo `.env` en la raiz del proyecto usando `.env.example` como base.
+2. Complete las variables de Azure AD:
+
+```env
+VITE_AZURE_CLIENT_ID=tu-client-id
+VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/tu-tenant-id
+VITE_AZURE_SCOPES=api://tu-api-app-id/access_as_user
+VITE_AZURE_REDIRECT_URI=http://localhost:5173
+VITE_AZURE_POST_LOGOUT_REDIRECT_URI=http://localhost:5173
+```
+
+3. Reinicie `npm run dev`.
+4. Use el boton **Iniciar sesion** en el header.
+
+Con esto, los requests a `/api/*` enviaran automaticamente el header `Authorization: Bearer <token>`.
+
 Edita **`src/config/merchants.config.json`** para agregar o modificar terminales:
 
 ```json

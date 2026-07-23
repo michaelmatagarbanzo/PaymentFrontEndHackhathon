@@ -1,8 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAzureAuth } from '@/composables/useAzureAuth'
 
 const route = useRoute()
+const {
+  account,
+  isLoading: isAuthLoading,
+  isAuthenticating,
+  authError,
+  hasConfig,
+  configError,
+  login,
+  logout,
+} = useAzureAuth()
 
 const navLinks = [
   { name: 'Cliente',       path: '/',              icon: '⬢' },
@@ -22,6 +33,16 @@ function applyTheme(dark: boolean) {
 function toggleTheme() {
   isDark.value = !isDark.value
   applyTheme(isDark.value)
+}
+
+const accountLabel = computed(() => account.value?.username ?? '')
+
+async function onLogin() {
+  await login()
+}
+
+async function onLogout() {
+  await logout()
 }
 
 onMounted(() => {
@@ -83,8 +104,46 @@ onMounted(() => {
           </RouterLink>
         </nav>
 
-        <!-- Right: theme switch + status -->
+        <!-- Right: auth + theme switch + status -->
         <div class="flex items-center gap-4">
+
+          <!-- Azure auth -->
+          <div class="flex items-center gap-2">
+            <template v-if="hasConfig">
+              <span
+                v-if="accountLabel"
+                class="text-[11px] font-mono text-slate-500 dark:text-slate-400 max-w-[180px] truncate"
+                :title="accountLabel"
+              >
+                {{ accountLabel }}
+              </span>
+              <button
+                v-if="accountLabel"
+                type="button"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                :disabled="isAuthenticating"
+                @click="onLogout"
+              >
+                Cerrar sesion
+              </button>
+              <button
+                v-else
+                type="button"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-600 text-white hover:bg-cyan-500 transition-colors disabled:opacity-60"
+                :disabled="isAuthenticating || isAuthLoading"
+                @click="onLogin"
+              >
+                Iniciar sesion
+              </button>
+            </template>
+            <span
+              v-else
+              class="text-[11px] font-mono text-amber-600 dark:text-amber-400"
+              :title="configError"
+            >
+              Azure no configurado
+            </span>
+          </div>
 
           <!-- Theme switch -->
           <div class="flex items-center gap-2">
@@ -121,6 +180,12 @@ onMounted(() => {
         </div>
       </div>
     </header>
+
+    <div v-if="authError && hasConfig" class="max-w-5xl mx-auto w-full px-6 pt-4">
+      <div class="rounded-lg border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300 px-4 py-2 text-xs">
+        {{ authError }}
+      </div>
+    </div>
 
     <!-- Main -->
     <main class="flex-1 max-w-5xl mx-auto w-full px-6 py-8">
