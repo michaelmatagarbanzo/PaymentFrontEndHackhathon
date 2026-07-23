@@ -5,7 +5,6 @@ import SdkSourceSelector from '@/components/SdkSourceSelector.vue'
 import type { Merchant } from '@/types'
 import merchantsConfig from '@/config/merchants.config.json'
 import { useSdkSource, resolvedSdkUrl } from '@/composables/useSdkSource'
-import { authFetch } from '@/utils/authFetch'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -106,7 +105,7 @@ function setResult(id: number, patch: Partial<CaseResult>) {
 async function runCase(tc: CaseConfig): Promise<void> {
   setResult(tc.id, { status: 'running', startedAt: Date.now() })
   try {
-    const res = await authFetch('/api/run-case', {
+    const res = await fetch('/api/run-case', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

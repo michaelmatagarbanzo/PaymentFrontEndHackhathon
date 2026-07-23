@@ -58,7 +58,7 @@ const visibleFields = computed(() =>
 )
 
 function goBack() {
-  router.push(source.value === 'checkout' ? '/' : '/payment')
+  router.push(source.value === 'safekey' ? '/payment' : '/')
 }
 </script>
 

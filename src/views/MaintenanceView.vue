@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import type { Merchant, Card } from '@/types'
-import { authFetch } from '@/utils/authFetch'
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -62,7 +61,7 @@ const isTerminalFormValid = computed(() =>
 async function loadTerminals() {
   loadingTerminals.value = true
   try {
-    const res = await authFetch('/api/config/merchants')
+    const res = await fetch('/api/config/merchants')
     terminals.value = await res.json()
   } catch (err) {
     showStatus('error', `No se pudieron cargar las terminales: ${(err as Error).message}`)
@@ -88,7 +87,7 @@ function closeTerminalModal() {
 }
 
 async function persistTerminals(next: Merchant[]) {
-  const res = await authFetch('/api/config/merchants', {
+  const res = await fetch('/api/config/merchants', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(next),
@@ -177,7 +176,7 @@ const isCardFormValid = computed(() =>
 async function loadCards() {
   loadingCards.value = true
   try {
-    const res = await authFetch('/api/config/cards')
+    const res = await fetch('/api/config/cards')
     cards.value = await res.json()
   } catch (err) {
     showStatus('error', `No se pudieron cargar las tarjetas: ${(err as Error).message}`)
@@ -203,7 +202,7 @@ function closeCardModal() {
 }
 
 async function persistCards(next: Card[]) {
-  const res = await authFetch('/api/config/cards', {
+  const res = await fetch('/api/config/cards', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(next),

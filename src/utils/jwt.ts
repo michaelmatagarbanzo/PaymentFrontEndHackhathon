@@ -154,7 +154,7 @@ async function buildToken(payload: JwtPayload, merchant: Merchant): Promise<stri
   return `${signingInput}.${sigB64}`
 }
 
-function buildBasePayload(merchant: Merchant, request: JwtRequest): JwtPayload {
+function buildBasePayload(merchant: Merchant, request: JwtRequest | LegacyJwtRequest): JwtPayload {
   const now = toUnixTime()
   return {
     nbf: now,
@@ -215,12 +215,12 @@ export async function getTokenCapture(
   terminalId: string,
   merchant: Merchant,
 ): Promise<string> {
-  const request: JwtRequest = {
+  const request: LegacyJwtRequest = {
     orderId: '',
     totalAmount,
     terminalId,
-    transactionId,
     invoice: '',
+    transactionId,
   }
 
   const payload = buildBasePayload(merchant, request)
@@ -237,7 +237,7 @@ export async function getTokenReverse(
   terminalId: string,
   merchant: Merchant,
 ): Promise<string> {
-  const request: JwtRequest = {
+  const request: LegacyJwtRequest = {
     orderId,
     totalAmount: '',
     terminalId,

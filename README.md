@@ -13,10 +13,24 @@ Abre http://localhost:5173
 
 ## ⚙️ Configuración
 
-### Login con Microsoft Azure (MSAL)
+### Endpoint de pagos AppConnector
 
 1. Cree un archivo `.env` en la raiz del proyecto usando `.env.example` como base.
-2. Complete las variables de Azure AD:
+2. Configure las variables del endpoint de pagos:
+
+```env
+VITE_PAYMENTS_API_BASE_URL=http://localhost:7071
+VITE_PAYMENTS_API_KEY=dev-functions-key
+VITE_PAYMENTS_CURRENCY=USD
+```
+
+3. Reinicie `npm run dev`.
+
+El formulario de Cliente envia `POST /api/v1/payments` con `X-API-Key` y body en camelCase segun el contrato AppConnector.
+
+### Login con Microsoft Azure (MSAL)
+
+El login de Azure existe para otros flujos internos del proyecto y se configura con:
 
 ```env
 VITE_AZURE_CLIENT_ID=tu-client-id
@@ -25,11 +39,6 @@ VITE_AZURE_SCOPES=api://tu-api-app-id/access_as_user
 VITE_AZURE_REDIRECT_URI=http://localhost:5173
 VITE_AZURE_POST_LOGOUT_REDIRECT_URI=http://localhost:5173
 ```
-
-3. Reinicie `npm run dev`.
-4. Use el boton **Iniciar sesion** en el header.
-
-Con esto, los requests a `/api/*` enviaran automaticamente el header `Authorization: Bearer <token>`.
 
 Edita **`src/config/merchants.config.json`** para agregar o modificar terminales:
 
@@ -81,6 +90,7 @@ src/
 ├── types/
 │   └── index.ts                ← Tipos TypeScript
 ├── utils/
+│   ├── appConnectorPayments.ts ← Builder + cliente HTTP de /api/v1/payments
 │   ├── jwt.ts                  ← Generación de JWT con HMAC-SHA256 (Web Crypto API)
 │   ├── currency.ts             ← doubleToIso, formatCurrency, etc.
 │   ├── products.ts             ← Base de datos de productos (equivalente a ProductosDB.cs)
@@ -89,7 +99,7 @@ src/
 │   └── index.ts
 ├── views/
 │   ├── CheckoutView.vue        ← Flujo BCO Checkout (modal externo)
-│   ├── PaymentView.vue         ← Flujo SafeKey (formulario de tarjeta)
+│   ├── PaymentView.vue         ← Cliente AppConnector (POST /api/v1/payments)
 │   └── ResultView.vue          ← Pantalla de resultado
 └── components/
     ├── MerchantSelector.vue
@@ -107,6 +117,8 @@ replicando exactamente la lógica del `JwtClient.cs` original:
 - Claims: `nbf`, `exp`, `iat`, `iss`, `aud`, `Request` (con datos de la transacción)
 
 > ⚠️ **Solo para desarrollo/pruebas.** En producción, la firma del JWT debe hacerse server-side para no exponer el `privateKey`.
+
+Nota: el flujo principal de `PaymentView.vue` actualmente usa el endpoint AppConnector con `X-API-Key`; los flujos de JWT se mantienen para Checkout/runner.
 
 ## 📦 Build para producción
 

@@ -318,7 +318,6 @@ onMounted(() => {
                     min="0.01"
                     class="input-field pl-7"
                     dpmp-field="Amount"
-                    @change="generateToken"
                   />
                 </div>
               </div>
@@ -330,7 +329,6 @@ onMounted(() => {
                   type="text"
                   class="input-field"
                   dpmp-field="Invoice"
-                  @change="generateToken"
                 />
               </div>
             </div>
