@@ -293,9 +293,8 @@ onMounted(() => {
                 class="badge text-[10px]"
                 :class="{
                   'badge-amber': cardBrand === 'AMEX',
-                  'badge-cyan': cardBrand === 'VISA',
+                  'badge-cyan': cardBrand === 'VISA' || cardBrand === 'CARD',
                   'badge-emerald': cardBrand === 'MC',
-                  'badge-cyan': cardBrand === 'CARD',
                 }"
               >
                 {{ cardBrand }}

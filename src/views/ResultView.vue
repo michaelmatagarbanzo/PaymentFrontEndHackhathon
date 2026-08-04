@@ -60,6 +60,10 @@ const visibleFields = computed(() =>
 function goBack() {
   router.push(source.value === 'safekey' ? '/payment' : '/')
 }
+
+function copyJson() {
+  navigator.clipboard.writeText(JSON.stringify(result.value, null, 2))
+}
 </script>
 
 <template>
@@ -157,7 +161,7 @@ function goBack() {
         <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <h2 class="text-sm font-semibold text-slate-700">JSON Response</h2>
           <button
-            @click="navigator.clipboard.writeText(JSON.stringify(result, null, 2))"
+            @click="copyJson"
             class="text-xs font-mono text-slate-400 hover:text-cyan-600 transition-colors"
           >
             Copiar

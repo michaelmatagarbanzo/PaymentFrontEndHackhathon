@@ -9,7 +9,7 @@ const postLogoutRedirectUri = import.meta.env.VITE_AZURE_POST_LOGOUT_REDIRECT_UR
 
 const scopes = (import.meta.env.VITE_AZURE_SCOPES ?? '')
   .split(',')
-  .map((scope) => scope.trim())
+  .map((scope: string) => scope.trim())
   .filter(Boolean)
 
 export const hasAzureAuthConfig = Boolean(clientId && authority && scopes.length > 0)
