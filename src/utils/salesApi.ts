@@ -86,11 +86,14 @@ export function buildSaleRequest(params: {
   }
 }
 
-/**
- * Posts to our own dev-server proxy (see vite.config.ts), never straight to
- * appgateway-hackhathon-api: the sale-api client secret must stay server-side
- * and the backend doesn't have CORS configured for browser calls.
- */
+// In dev, '/api/v1/sales' is intercepted by the devApiPlugin proxy in
+// vite.config.ts. In production there's no such dev server, so the built
+// site needs an absolute URL to the deployed sales-proxy-function instead —
+// set via VITE_SALES_PROXY_URL. Either way, we never call
+// appgateway-hackhathon-api directly: the sale-api client secret must stay
+// server-side (Client Credentials can't be exchanged from a browser).
+const SALES_PROXY_URL = import.meta.env.VITE_SALES_PROXY_URL?.trim() || '/api/v1/sales'
+
 export async function sendSaleTransaction(
   request: SaleRequest,
   options?: { correlationId?: string },
@@ -100,7 +103,7 @@ export async function sendSaleTransaction(
     headers.set('X-Correlation-Id', options.correlationId)
   }
 
-  return fetch('/api/v1/sales', {
+  return fetch(SALES_PROXY_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify(request),

@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AZURE_SALES_TENANT_ID": "754d6f21-67a5-4063-be7a-ac70991f2bd8",
+    "AZURE_SALES_CLIENT_ID": "",
+    "AZURE_SALES_CLIENT_SECRET": "",
+    "AZURE_SALES_API_BASE_URL": "https://appgateway-hackhathon-api.azurewebsites.net"
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}

@@ -26,3 +26,8 @@ Thumbs.db
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Azure Functions
+sales-proxy-function/local.settings.json
+sales-proxy-function/bin/
+sales-proxy-function/obj/
