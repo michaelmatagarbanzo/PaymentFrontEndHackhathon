@@ -3,10 +3,10 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MerchantSelector from '@/components/MerchantSelector.vue'
 import type {
-  AppConnectorPaymentResponse,
-  AppConnectorProblemDetails,
   Merchant,
   PaymentForm,
+  SaleProblemDetails,
+  SaleResponse,
 } from '@/types'
 import { generateOrderId } from '@/utils/jwt'
 import imgVisa from '@/assets/img/VISA.png'
@@ -14,11 +14,11 @@ import imgMC   from '@/assets/img/MC.png'
 import imgAmex from '@/assets/img/AMEX.png'
 import { formatCurrency, generateInvoice } from '@/utils/currency'
 import {
-  buildAppConnectorPaymentRequest,
-  mapPaymentResponseToResult,
-  sendAppConnectorPayment,
+  buildSaleRequest,
+  mapSaleResponseToResult,
+  sendSaleTransaction,
   toProblemMessage,
-} from '@/utils/appConnectorPayments'
+} from '@/utils/salesApi'
 import merchantsConfig from '@/config/merchants.config.json'
 
 // ─── Random data helpers ───────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ function startNetworkMonitoring() {
           errorDetails.value = {
             code: 401,
             url,
-            message: 'No autorizado - Verifique X-API-Key y evite enviar Authorization',
+            message: 'No autorizado - el proxy de /api/v1/sales no obtuvo un JWT valido (revise AZURE_SALES_CLIENT_ID/SECRET en su .env)',
           }
           error.value = `Error ${response.status}: ${response.statusText}`
         }
@@ -204,20 +204,19 @@ async function pay() {
   errorDetails.value = null
 
   try {
-    const request = buildAppConnectorPaymentRequest({
+    const request = buildSaleRequest({
       merchant: selectedMerchant.value,
       form: form.value,
-      referenceCode: orderId.value,
     })
 
-    const response = await sendAppConnectorPayment(request, {
+    const response = await sendSaleTransaction(request, {
       correlationId: orderId.value,
     })
 
     if (!response.ok) {
-      let problem: AppConnectorProblemDetails | null = null
+      let problem: SaleProblemDetails | null = null
       try {
-        problem = await response.json() as AppConnectorProblemDetails
+        problem = await response.json() as SaleProblemDetails
       } catch {
         problem = null
       }
@@ -232,14 +231,14 @@ async function pay() {
       return
     }
 
-    const data = await response.json() as AppConnectorPaymentResponse
-    const result = mapPaymentResponseToResult(data)
+    const data = await response.json() as SaleResponse
+    const result = mapSaleResponseToResult(data)
 
     router.push({
       name: 'result',
       query: {
         data: JSON.stringify(result),
-        source: 'appconnector',
+        source: 'sales',
       },
     })
   } catch (err) {

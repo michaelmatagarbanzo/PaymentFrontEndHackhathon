@@ -13,20 +13,42 @@ Abre http://localhost:5173
 
 ## ⚙️ Configuración
 
-### Endpoint de pagos AppConnector
+### Endpoint de pagos: Sale API (appgateway-hackhathon-api)
+
+El formulario de Cliente (`PaymentView.vue`) envia `POST /api/v1/sales` (contrato real
+en https://appgateway-hackhathon-api.azurewebsites.net/v3/api-docs). Ese backend exige
+un JWT de Microsoft Entra ID y **no tiene CORS configurado**, por lo que el navegador
+no puede llamarlo directo. `src/utils/salesApi.ts` en cambio llama a `/api/v1/sales`
+(mismo origen), y `vite.config.ts` (`devApiPlugin`) intercepta esa ruta en el dev
+server: obtiene un token vía Client Credentials y reenvia la petición con el
+`Authorization: Bearer` agregado — el Client Secret nunca llega al navegador.
+
+> ⚠️ Este proxy solo corre con `npm run dev`. El build de producción (`dist/`) es
+> estático — si se despliega tal cual (como hace el workflow de GitHub Actions
+> actual), `/api/v1/sales` no tendrá backend que lo sirva. Para que la demo
+> funcione desplegada hace falta CORS en el backend + un App Registration tipo
+> SPA con PKCE, o un servidor (no estático) que haga este mismo proxy.
 
 1. Cree un archivo `.env` en la raiz del proyecto usando `.env.example` como base.
-2. Configure las variables del endpoint de pagos:
+2. Configure las credenciales del proxy (pídalas al equipo — están en la guía de
+   integración interna, `Client ID`/`Client Secret` del App Registration `sale-api`):
 
 ```env
-VITE_PAYMENTS_API_BASE_URL=http://localhost:7071
-VITE_PAYMENTS_API_KEY=dev-functions-key
-VITE_PAYMENTS_CURRENCY=USD
+AZURE_SALES_TENANT_ID=754d6f21-67a5-4063-be7a-ac70991f2bd8
+AZURE_SALES_CLIENT_ID=
+AZURE_SALES_CLIENT_SECRET=
+AZURE_SALES_API_BASE_URL=https://appgateway-hackhathon-api.azurewebsites.net
 ```
 
 3. Reinicie `npm run dev`.
 
-El formulario de Cliente envia `POST /api/v1/payments` con `X-API-Key` y body en camelCase segun el contrato AppConnector.
+### Endpoint de pagos AppConnector (legado, backend eliminado)
+
+El proyecto también tenía un flujo contra `POST /api/v1/payments` (contrato
+AppConnector, auth con `X-API-Key`), servido por el Web App
+`PaymentProcessorHachathon`. Ese Web App se eliminó por accidente en Azure y no
+se restauró, así que ese flujo ya no tiene backend activo — se reemplazó por el
+de Sale API arriba.
 
 ### Login con Microsoft Azure (MSAL)
 
@@ -90,7 +112,7 @@ src/
 ├── types/
 │   └── index.ts                ← Tipos TypeScript
 ├── utils/
-│   ├── appConnectorPayments.ts ← Builder + cliente HTTP de /api/v1/payments
+│   ├── salesApi.ts             ← Builder + cliente HTTP de /api/v1/sales
 │   ├── jwt.ts                  ← Generación de JWT con HMAC-SHA256 (Web Crypto API)
 │   ├── currency.ts             ← doubleToIso, formatCurrency, etc.
 │   ├── products.ts             ← Base de datos de productos (equivalente a ProductosDB.cs)
@@ -99,7 +121,7 @@ src/
 │   └── index.ts
 ├── views/
 │   ├── CheckoutView.vue        ← Flujo BCO Checkout (modal externo)
-│   ├── PaymentView.vue         ← Cliente AppConnector (POST /api/v1/payments)
+│   ├── PaymentView.vue         ← Cliente Sale API (POST /api/v1/sales)
 │   └── ResultView.vue          ← Pantalla de resultado
 └── components/
     ├── MerchantSelector.vue
@@ -118,7 +140,7 @@ replicando exactamente la lógica del `JwtClient.cs` original:
 
 > ⚠️ **Solo para desarrollo/pruebas.** En producción, la firma del JWT debe hacerse server-side para no exponer el `privateKey`.
 
-Nota: el flujo principal de `PaymentView.vue` actualmente usa el endpoint AppConnector con `X-API-Key`; los flujos de JWT se mantienen para Checkout/runner.
+Nota: el flujo principal de `PaymentView.vue` actualmente usa el endpoint Sale API (JWT via proxy server-side, ver sección de configuración arriba); los flujos de JWT firmado en cliente se mantienen para Checkout/runner.
 
 ## 📦 Build para producción
 

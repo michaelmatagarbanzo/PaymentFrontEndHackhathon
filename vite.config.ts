@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
@@ -102,13 +102,95 @@ async function playwrightRunCase(body: {
   }
 }
 
+// ── Sale API proxy (Client Credentials) ─────────────────────────────────────
+// The sale-api App Registration is a confidential client (has a secret), so the
+// token exchange must happen here (Node, dev-only) and never in browser code —
+// a VITE_-prefixed secret would ship inside the built JS bundle.
+let cachedSalesToken: { value: string; expiresAt: number } | null = null
+
+async function getSalesApiToken(env: Record<string, string>): Promise<string> {
+  const now = Date.now()
+  if (cachedSalesToken && cachedSalesToken.expiresAt - 30_000 > now) {
+    return cachedSalesToken.value
+  }
+
+  const tenantId = env.AZURE_SALES_TENANT_ID
+  const clientId = env.AZURE_SALES_CLIENT_ID
+  const clientSecret = env.AZURE_SALES_CLIENT_SECRET
+  if (!tenantId || !clientId || !clientSecret) {
+    throw new Error('Faltan AZURE_SALES_TENANT_ID / AZURE_SALES_CLIENT_ID / AZURE_SALES_CLIENT_SECRET en .env')
+  }
+  const audience = env.AZURE_SALES_AUDIENCE?.trim() || `api://${clientId}`
+
+  const res = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: `${audience}/.default`,
+      grant_type: 'client_credentials',
+    }),
+  })
+  if (!res.ok) {
+    throw new Error(`No se pudo obtener token AAD: ${res.status} ${await res.text()}`)
+  }
+
+  const data = await res.json() as { access_token: string; expires_in: number }
+  cachedSalesToken = { value: data.access_token, expiresAt: now + data.expires_in * 1000 }
+  return cachedSalesToken.value
+}
+
+async function proxySaleRequest(
+  env: Record<string, string>,
+  body: Buffer,
+  correlationId: string | string[] | undefined,
+): Promise<{ status: number; contentType: string; body: string }> {
+  const token = await getSalesApiToken(env)
+  const baseUrl = env.AZURE_SALES_API_BASE_URL?.trim() || 'https://appgateway-hackhathon-api.azurewebsites.net'
+
+  const upstream = await fetch(`${baseUrl}/api/v1/sales`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(correlationId ? { 'X-Correlation-Id': String(correlationId) } : {}),
+    },
+    body: body.toString('utf-8'),
+  })
+
+  return {
+    status: upstream.status,
+    contentType: upstream.headers.get('content-type') ?? 'application/json',
+    body: await upstream.text(),
+  }
+}
+
 // ── Dev-server API middlewares ────────────────────────────────────────────────
 // Registered via a plugin's configureServer hook — `server.configureServer` is
 // not a real Vite option, it must live on a plugin to actually be wired up.
-function devApiPlugin(): Plugin {
+function devApiPlugin(env: Record<string, string>): Plugin {
   return {
     name: '3ds-tester-dev-api',
     configureServer(server) {
+
+      // ── Sale API proxy — injects AAD Bearer token, keeps secret server-side ──
+      server.middlewares.use('/api/v1/sales', (req: IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') { res.writeHead(405); res.end(); return }
+        const chunks: Buffer[] = []
+        req.on('data', (c: Buffer) => chunks.push(c))
+        req.on('end', () => {
+          proxySaleRequest(env, Buffer.concat(chunks), req.headers['x-correlation-id'])
+            .then(({ status, contentType, body }) => {
+              res.writeHead(status, { 'Content-Type': contentType })
+              res.end(body)
+            })
+            .catch((err) => {
+              res.writeHead(502, { 'Content-Type': 'application/problem+json' })
+              res.end(JSON.stringify({ title: 'Proxy error', detail: err instanceof Error ? err.message : String(err) }))
+            })
+        })
+      })
 
       // ── Playwright case runner ───────────────────────────────────────────────
       server.middlewares.use('/api/run-case', (req: IncomingMessage, res: ServerResponse) => {
@@ -270,12 +352,15 @@ function devApiPlugin(): Plugin {
   }
 }
 
-export default defineConfig({
-  plugins: [vue(), devApiPlugin()],
-  resolve: {
-    alias: { '@': resolve(__dirname, 'src') },
-  },
-  server: {
-    fs: { strict: false },
-  },
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  return {
+    plugins: [vue(), devApiPlugin(env)],
+    resolve: {
+      alias: { '@': resolve(__dirname, 'src') },
+    },
+    server: {
+      fs: { strict: false },
+    },
+  }
 })

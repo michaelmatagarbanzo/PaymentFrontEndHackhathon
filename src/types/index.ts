@@ -90,67 +90,66 @@ export interface PaymentForm {
   paymentIndicator: string
 }
 
-// ─── AppConnector Payments API ───────────────────────────────────────────────
+// ─── Sale API (appgateway-hackhathon-api /api/v1/sales) ──────────────────────
+// Contract taken from the live OpenAPI spec at
+// https://appgateway-hackhathon-api.azurewebsites.net/v3/api-docs
 
-export interface AppConnectorPaymentRequest {
-  clientReferenceInformation: {
-    code: string
-    ecspLogId: string | null
-  }
-  transactionInformation: {
-    transactionType: string
-    terminalId: string
-    entryMode: string
-  }
-  paymentInformation: {
-    card: {
-      number: string
-      expirationMonth: string
-      expirationYear: string
-      securityCode: string | null
-      cardHolderName: string | null
-    }
-  }
-  orderInformation: {
-    amountDetails: {
-      totalAmount: string
-      currency: string
-    }
-  }
-  authenticationInformation: {
+export interface SaleRequest {
+  terminalId: string
+  transactionType: 'SALE'
+  totalAmount: number
+  currency?: string
+  accountNumber: string
+  /** Format YYMM, e.g. "2805" = year 28, month 05 */
+  expirationDate: string
+  invoice: number
+  securityCodeEntry: string
+  securityValidationResponse: string
+  binValidate?: boolean
+  authenticationInformation?: {
     eci: string
     cavv: string
-    xid: string
-    enrollmentStatus: string
+    xid?: string
+    enrollmentStatus?: string
   } | null
-  tokenizationInformation: {
+  tokenizationInformation?: {
     wallet: string
     device: string
     paymentIndicator: string
     cryptogramEci: string
     cryptogram: string
   } | null
-  processingInformation: {
+  processingInformation?: {
     errorCentinel: string
     statusReason: string
   } | null
 }
 
-export interface AppConnectorPaymentResponse {
-  transactionId: string
-  provider: 'WCF_Pasarelas' | 'CyberSource' | string
-  status: 'Approved' | 'Declined' | 'Error' | string
-  providerStatus: string | null
-  providerResponseCode: string | null
-  providerMessage: string | null
-  authorizationCode: string | null
-  referenceNumber: string | null
-  referenceCode: string | null
-  traceId: string
-  processedAt: string
+export interface SaleAuthorizationResult {
+  authorizationSource?: string
+  authorizationNumber?: string
+  responseCode?: string
+  responseDescription?: string
+  referenceNumber?: string
+  hostDate?: string
+  hostTime?: string
 }
 
-export interface AppConnectorProblemDetails {
+export interface SaleResponse {
+  transactionId?: string
+  correlationId?: string
+  status?: string
+  terminalId?: string
+  totalAmount?: number
+  currency?: string
+  cardHolderName?: string
+  authorization?: SaleAuthorizationResult
+  processingDateTime?: string
+  createdAt?: string
+  diagnostics?: Record<string, unknown>
+}
+
+export interface SaleProblemDetails {
   type?: string
   title?: string
   status?: number
