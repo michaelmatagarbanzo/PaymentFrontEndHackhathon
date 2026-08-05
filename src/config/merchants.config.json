@@ -5,7 +5,7 @@
       "privateKey": "CnDPUk4LswujEO4EWApcjmFrxXai6K62bBJv7ObmOG76SHo02jf",
       "publicKey": "jyY8pQu/OpBohKp9j1",
       "terminalId": "60001002",
-      "description": "Terminal de Prueba 1",
+      "description": "Terminal AS400",
       "audience": "BCO"
     },
     {
@@ -13,7 +13,7 @@
       "privateKey": "CnDPUk4LswujEO4EWApcjmFrxXai6K62bBJv7ObmOG76SHo02jf",
       "publicKey": "jyY8pQu/OpBohKp9j1",
       "terminalId": "60001001",
-      "description": "Terminal de Prueba 2",
+      "description": "Terminal CYBERSOURCE",
       "audience": "BCO"
     },
     {
